@@ -1,0 +1,16 @@
+"Footprint pattern","Rotation","Center X","Center Y"
+# Standard KiCad v8 footprints
+"^C_Disc_.+_P10.00mm$",0,5,
+"^IDC-Header_.+Vertical$",-90,1.25,-11.55
+"^LQFP-100",-90,,
+"^PinHeader_1x03_P2.54mm_Vertical$",-90,,-2.5
+"^PinSocket_1x06_P2.54mm_Vertical$",-90,,-6.4
+"^PinSocket_1x08_P2.54mm_Vertical$",-90,,-8.9
+"^PinSocket_1x10_P2.54mm_Vertical$",-90,,-11.4
+"^SOT-223",180,,
+"^SOT-23",180,,
+"^SuperSOT-6",270,,
+"^TSSOP-",270,,
+# Custom footprints
+"^HY931147C",0,2.35,
+"^SOIC254P1016X385-4N$",-90,,
