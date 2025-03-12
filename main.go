@@ -29,10 +29,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dpeckett/jlcfabtool/bom"
 	"github.com/dpeckett/jlcfabtool/jlcpcb"
-	"github.com/dpeckett/jlcfabtool/partsdb"
-	"github.com/dpeckett/jlcfabtool/placement"
+	"github.com/dpeckett/jlcfabtool/jlcpcb/partsdb"
+	"github.com/dpeckett/jlcfabtool/kicad/bom"
+	"github.com/dpeckett/jlcfabtool/kicad/placement"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/text/cases"
@@ -58,23 +58,18 @@ func main() {
 					},
 					{
 						Name:      "optimize",
-						Usage:     "Optimize a BOM by selecting the best parts from the JLCPCB parts database.",
+						Usage:     "Optimize a BOM by suggesting the best parts from the JLCPCB parts database.",
 						ArgsUsage: "<bom file>",
 						Flags: []cli.Flag{
 							&cli.StringFlag{
-								Name:  "db-path",
-								Usage: "Path to the JLCPCB parts database",
-								Value: "jlcpcb-parts.db",
-							},
-							&cli.StringFlag{
-								Name:  "report",
-								Usage: "Path to the optimization report file",
-								Value: "report.txt",
+								Name:    "output",
+								Aliases: []string{"o"},
+								Usage:   "Path to the reccommended parts report",
+								Value:   "recommended_parts.txt",
 							},
 						},
 						Action: func(c *cli.Context) error {
-							// Open the parts database
-							db, err := partsdb.Open(c.String("db-path"))
+							db, err := partsdb.Open()
 							if err != nil {
 								return err
 							}
@@ -85,7 +80,7 @@ func main() {
 								return err
 							}
 
-							reportWriter, err := os.Create(c.String("report"))
+							reportWriter, err := os.Create(c.String("output"))
 							if err != nil {
 								return fmt.Errorf("error creating report file: %w", err)
 							}
@@ -167,7 +162,8 @@ func main() {
 								return fmt.Errorf("error downloading parts database: %w", err)
 							}
 
-							f, err := os.Create(filepath.Join(tmpDir, "jlcpcb-components-basic-preferred.csv"))
+							csvPath := filepath.Join(tmpDir, "jlcpcb-components-basic-preferred.csv")
+							f, err := os.Create(csvPath)
 							if err != nil {
 								return fmt.Errorf("error creating temporary file: %w", err)
 							}
@@ -179,26 +175,26 @@ func main() {
 								return fmt.Errorf("error writing temporary file: %w", err)
 							}
 
-							db, err := partsdb.CreateFromCSV(c.String("output"), filepath.Join(tmpDir, "jlcpcb-components-basic-preferred.csv"))
+							err = partsdb.CreateFromCSV(c.String("output"), csvPath)
 							if err != nil {
 								return err
 							}
 
-							return db.Close()
+							return nil
 						},
 					},
 				},
 			},
 			{
 				Name:  "placement",
-				Usage: "Commands for working with component placement files.",
+				Usage: "Commands for working with component placements (CPL).",
 				Subcommands: []*cli.Command{
 					{
 						Name:      "convert",
-						Usage:     "Convert a KiCad component placement file into JLCPCB format.",
+						Usage:     "Convert a KiCad component placements (CPL) into JLCPCB format.",
 						ArgsUsage: "<file>",
 						Action: func(c *cli.Context) error {
-							return convertKiCadPlacements(c.Args().First())
+							return convertKiCadComponentPlacements(c.Args().First())
 						},
 					},
 				},
@@ -247,7 +243,7 @@ func convertKiCadBOM(file string) error {
 	return nil
 }
 
-func convertKiCadPlacements(file string) error {
+func convertKiCadComponentPlacements(file string) error {
 	slog.Info("Converting component placement", slog.Any("file", file))
 
 	placements, err := placement.LoadFromCSV(file)

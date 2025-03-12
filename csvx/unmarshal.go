@@ -27,8 +27,8 @@ import (
 	"strings"
 )
 
-// UnmarshalCSV reads a CSV file from an io.Reader and unmarshals it into a slice of structs.
-func UnmarshalCSV[T any](r io.Reader) ([]T, error) {
+// Unmarshal reads a CSV file from an io.Reader and unmarshals it into a slice of structs.
+func Unmarshal[T any](r io.Reader) ([]T, error) {
 	reader := csv.NewReader(r)
 	reader.TrimLeadingSpace = true
 	reader.Comment = '#'

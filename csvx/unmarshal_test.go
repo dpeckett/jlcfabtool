@@ -35,16 +35,13 @@ type Person struct {
 	Active    bool      `csv:"active"`
 }
 
-func TestUnmarshalCSV(t *testing.T) {
-	// Sample CSV input
+func TestUnmarshal(t *testing.T) {
 	csvData := `Name,Age,Birthdate,Active
 John Doe,30,"1994-06-15T00:00:00Z",true
 Jane Smith,25,"1998-09-10T00:00:00Z",false
 `
 
-	reader := strings.NewReader(csvData)
-
-	people, err := csvx.UnmarshalCSV[Person](reader)
+	people, err := csvx.Unmarshal[Person](strings.NewReader(csvData))
 
 	require.NoError(t, err)
 	require.Len(t, people, 2)

@@ -1,0 +1,7 @@
+"Reference","Value","Footprint","Qty","LCSC PN"
+"C1,C2,C3,C4,C7,C10","100n","Capacitor_SMD:C_0603_1608Metric","6","C14663"
+"C5,C6","20p","Capacitor_SMD:C_0603_1608Metric","2","C1648"
+"C8","2.2u","Capacitor_SMD:C_0603_1608Metric","1","C23630"
+"D2","SMAJ58A","Diode_SMD:D_SMA","1","C110521"
+"D3","S1B-13-F","Diode_SMD:D_SMA","1","C156295"
+"J2","Boot Selection","Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical","1",
