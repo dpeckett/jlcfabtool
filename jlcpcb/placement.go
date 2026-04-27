@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Damian Peckett <damian@pecke.tt>.
+ * Copyright (C) 2026 Damian Peckett <damian@pecke.tt>.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published
@@ -25,20 +25,28 @@ import (
 	"sort"
 
 	"github.com/dpeckett/jlcfabtool/csvx"
+	"github.com/dpeckett/jlcfabtool/kicad/placement"
 )
 
-// RotationCorrection is a correction to apply to a component's position and rotation.
-// It is used to correct for differences between KiCad's origin and JLCPCB's canonical orientation.
+// RotationCorrection defines how to adjust placement for a component.
 type RotationCorrection struct {
-	FootprintPattern UnmarshallableRegexp `csv:"Footprint pattern"`
-	// Rotation is the number of degrees that the component has been rotated
-	// relative to the JLCPCB canonical orientation.
-	Rotation float64 `csv:"Rotation"`
-	// CenterX and CenterY are the coordinates of the center of the component
-	// relative to KiCad's origin. JLCPCB always uses the center/midpoint of
-	// the component for placement.
-	CenterX float64 `csv:"Center X"`
-	CenterY float64 `csv:"Center Y"`
+	PackagePattern UnmarshallableRegexp `csv:"Package pattern"`
+	ValuePattern   UnmarshallableRegexp `csv:"Value pattern"`
+	Rotation       float64              `csv:"Rotation"`
+	CenterX        float64              `csv:"Center X"`
+	CenterY        float64              `csv:"Center Y"`
+}
+
+// specificity determines how specific a rule is (used for sorting).
+func (c RotationCorrection) specificity() int {
+	score := c.PackagePattern.Length
+
+	// Value match makes it much more specific
+	if c.ValuePattern.Regexp != nil {
+		score += 10000 + c.ValuePattern.Length
+	}
+
+	return score
 }
 
 //go:embed kicad_rotations.csv
@@ -54,69 +62,101 @@ func init() {
 	}
 }
 
-// ApplyRotationCorrection applies a rotation correction to a component's position and rotation.
-func ApplyRotationCorrection(pkg string, x, y, rotation float64) (float64, float64, float64) {
+// ApplyRotationCorrection applies a rotation correction based on package and optional value.
+func ApplyRotationCorrection(p placement.Placement) *placement.Placement {
+	slog.Info(
+		"Checking for rotation correction",
+		slog.String("package", p.Package),
+		slog.String("value", p.Val),
+	)
+
 	var matches []RotationCorrection
 	for _, correction := range rotationDB {
-		if correction.FootprintPattern.MatchString(pkg) {
-			matches = append(matches, correction)
+		// Package must match
+		if correction.PackagePattern.Regexp == nil {
+			continue
 		}
+		if !correction.PackagePattern.MatchString(p.Package) {
+			continue
+		}
+
+		// If value pattern exists, it must match
+		if correction.ValuePattern.Regexp != nil &&
+			!correction.ValuePattern.MatchString(p.Val) {
+			continue
+		}
+
+		matches = append(matches, correction)
 	}
 
-	if len(matches) > 0 {
-		slog.Info("Applying rotation correction", slog.String("package", pkg))
-
-		// Find the best matching pattern
-		sort.Slice(matches, func(i, j int) bool {
-			return matches[i].FootprintPattern.Length > matches[j].FootprintPattern.Length
-		})
-		correction := matches[0]
-
-		// Calculate the corrected position and rotation
-		rotatedX, rotatedY := rotatePoint(x+correction.CenterX, y+correction.CenterY, x, y, rotation)
-		finalRotation := clampRotation(rotation + correction.Rotation)
-
-		slog.Debug("Rotation correction applied",
-			slog.Float64("originalX", x), slog.Float64("originalY", y),
-			slog.Float64("correctedX", rotatedX), slog.Float64("correctedY", rotatedY),
-			slog.Float64("originalRotation", rotation), slog.Float64("finalRotation", finalRotation))
-
-		return rotatedX, rotatedY, finalRotation
+	if len(matches) == 0 {
+		return &p
 	}
 
-	// No correction found, return original values
-	return x, y, rotation
+	slog.Info("Applying rotation correction", slog.String("package", p.Package))
+
+	// Pick most specific match
+	sort.Slice(matches, func(i, j int) bool {
+		return matches[i].specificity() > matches[j].specificity()
+	})
+
+	correction := matches[0]
+
+	// Apply center offset + rotation
+	rotatedX, rotatedY := rotatePoint(
+		p.PosX+correction.CenterX,
+		p.PosY+correction.CenterY,
+		p.PosX,
+		p.PosY,
+		p.Rot,
+	)
+
+	finalRotation := clampRotation(p.Rot + correction.Rotation)
+
+	slog.Debug(
+		"Rotation correction applied",
+		slog.Float64("originalX", p.PosX),
+		slog.Float64("originalY", p.PosY),
+		slog.Float64("correctedX", rotatedX),
+		slog.Float64("correctedY", rotatedY),
+		slog.Float64("originalRotation", p.Rot),
+		slog.Float64("finalRotation", finalRotation),
+	)
+
+	return &placement.Placement{
+		Ref:     p.Ref,
+		Package: p.Package,
+		Val:     p.Val,
+		PosX:    rotatedX,
+		PosY:    rotatedY,
+		Rot:     finalRotation,
+		Side:    p.Side,
+	}
 }
 
-// rotatePoint rotates a point (x, y) around an origin (x0, y0) by theta degrees.
+// rotatePoint rotates a point (x, y) around origin (x0, y0) by theta degrees.
 func rotatePoint(x, y, x0, y0, theta float64) (float64, float64) {
-	// Convert theta to radians
 	thetaRad := theta * (math.Pi / 180.0)
 
-	// Translate point to origin
 	xPrime := x - x0
 	yPrime := y - y0
 
-	// Apply rotation transformation
 	xRotated := xPrime*math.Cos(thetaRad) - yPrime*math.Sin(thetaRad)
 	yRotated := xPrime*math.Sin(thetaRad) + yPrime*math.Cos(thetaRad)
 
-	// Translate back
 	xNew := xRotated + x0
 	yNew := yRotated + y0
 
 	return xNew, yNew
 }
 
-// clampRotation clamps an angle to the range [0, 360).
+// clampRotation clamps angle to [0, 360).
 func clampRotation(angle float64) float64 {
 	for angle < 0 {
 		angle += 360
 	}
-
 	for angle >= 360 {
 		angle -= 360
 	}
-
 	return angle
 }

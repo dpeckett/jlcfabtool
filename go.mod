@@ -5,8 +5,6 @@ go 1.23.0
 toolchain go1.23.7
 
 require (
-	github.com/jmoiron/sqlx v1.4.0
-	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v2 v2.27.6
 	golang.org/x/text v0.23.0

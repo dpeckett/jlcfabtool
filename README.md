@@ -5,13 +5,12 @@ A little CLI for working with JLCPCB. Yes there are plugins available for KiCad 
 ## Installation
 
 ```shell
-go build --tags "fts5" 
+go build
 ```
 
 ## Features
 
 - BOM conversion from KiCad CSV to JLCPCB CSV
-- BOM optimization (find JLC PCBA compatible/basic parts)
 - Placement conversion from KiCad CSV to JLCPCB CSV (including rotation and offset correction)
 
 ## Usage
@@ -26,17 +25,6 @@ Then you can run the following command:
 ```
 
 A new file `kicad-bom.jlcpcb.csv` will be created in the same directory as `kicad-bom.csv`.
-
-### Optimize a BOM for JLCPCB
-
-To optimize a BOM for JLCPCB (provide suggestions for basic and recommended parts), 
-you need to export the BOM from KiCad as a CSV file. Then you can run the following command:
-
-```shell
-./jlcfabtool bom optimize kicad.csv
-```
-
-A text report `recommended_parts.txt` will be created in the current directory.
 
 ### Convert Component Placements from KiCad to JLCPCB
 
