@@ -1,5 +1,10 @@
 "Package pattern","Value pattern","Rotation","Center X","Center Y"
+"^JST_PH_S\d+B-PH-SM\d+-TB.+Horizontal$","",180,,
 "^Oscillator_SMD_Kyocera_KC2520Z-4Pin_2.5x2.0mm$","",-90,,
 "^SOT-23-5$","",-90,,
+"^SOT-583-8$","",-90,,
+"^Texas_VSON-HR-8_1.5x2mm_P0.5mm$","",-90,,
 "^TSSOP-16_4.4x5mm_P0.65mm$","",-90,,
+"^TS-1088-AR02016$","",-90,,
 "^VQFN-16-1EP_3x3mm_P0.5mm_EP1.68x1.68mm$","",-90,,
+"^WSON-.+$","",-90,,
